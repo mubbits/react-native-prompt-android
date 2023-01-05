@@ -1,5 +1,5 @@
 {
-    "name": "react-native-prompt-android",
+    "name": "@exodus/react-native-prompt-android",
     "version": "0.3.4",
     "description": "Polyfill for Alert.prompt on Android",
     "repository": {
