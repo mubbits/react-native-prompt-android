@@ -1,6 +1,7 @@
 {
     "name": "@exodus/react-native-prompt-android",
     "version": "0.3.4",
+    "files": ["index*","android/*","package.json"],
     "description": "Polyfill for Alert.prompt on Android",
     "repository": {
         "type": "git",
@@ -16,7 +17,7 @@
         "android"
     ],
     "scripts": {
-        "lint": "eslint ./"
+        "lint": "eslint ./ --ignore-pattern '**/Example/*'"
     },
     "devDependencies": {
         "babel-eslint": "^6.1.2",

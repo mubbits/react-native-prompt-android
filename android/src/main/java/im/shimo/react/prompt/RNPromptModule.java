@@ -42,6 +42,7 @@ public class RNPromptModule extends ReactContextBaseJavaModule implements Lifecy
     /* package */ static final String KEY_STYLE = "style";
     /* package */ static final String KEY_DEFAULT_VALUE = "defaultValue";
     /* package */ static final String KEY_PLACEHOLDER = "placeholder";
+    /* package */ static final String KEY_SHOW_INPUT = "showInput";
 
     /* package */ static final Map<String, Object> CONSTANTS = MapBuilder.<String, Object>of(
             ACTION_BUTTON_CLICKED, ACTION_BUTTON_CLICKED,
@@ -68,8 +69,13 @@ public class RNPromptModule extends ReactContextBaseJavaModule implements Lifecy
 
     @Override
     public void onHostPause() {
-        // Don't show the dialog if the host is paused.
         mIsInForeground = false;
+        FragmentManagerHelper fragmentManagerHelper = getFragmentManagerHelper();
+        if (fragmentManagerHelper != null) {
+            fragmentManagerHelper.dismissExisting();
+        } else {
+            FLog.w(DialogModule.class, "onHostPause called but no FragmentManager found");
+        }
     }
 
     @Override
@@ -86,6 +92,48 @@ public class RNPromptModule extends ReactContextBaseJavaModule implements Lifecy
         } else {
             FLog.w(DialogModule.class, "onHostResume called but no FragmentManager found");
         }
+    }
+
+    /**
+     * reference: https://github.com/facebook/react-native/commit/0cd2f77116cbac8c5a402a355c2d359163429962
+     */
+    @ReactMethod
+    public void alertWithArgs(
+         ReadableMap options, final Callback callback) {
+        final FragmentManagerHelper fragmentManagerHelper = getFragmentManagerHelper();
+        if (fragmentManagerHelper == null) {
+            FLog.w(RNPromptModule.class, "Tried to show an alert while not attached to an Activity");
+            return;
+        }
+
+        final Bundle args = new Bundle();
+        if (options.hasKey(KEY_TITLE)) {
+            args.putString(RNPromptFragment.ARG_TITLE, options.getString(KEY_TITLE));
+        }        
+        if (options.hasKey(KEY_MESSAGE)) {
+            args.putString(RNPromptFragment.ARG_MESSAGE, options.getString(KEY_MESSAGE));
+        }
+        if (options.hasKey(KEY_BUTTON_POSITIVE)) {
+            args.putString(RNPromptFragment.ARG_BUTTON_POSITIVE, options.getString(KEY_BUTTON_POSITIVE));
+        }
+        if (options.hasKey(KEY_BUTTON_NEGATIVE)) {
+            args.putString(RNPromptFragment.ARG_BUTTON_NEGATIVE, options.getString(KEY_BUTTON_NEGATIVE));
+        }
+        if (options.hasKey(KEY_BUTTON_NEUTRAL)) {
+            args.putString(RNPromptFragment.ARG_BUTTON_NEUTRAL, options.getString(KEY_BUTTON_NEUTRAL));
+        }
+        if (options.hasKey(KEY_ITEMS)) {
+            ReadableArray items = options.getArray(KEY_ITEMS);
+            CharSequence[] itemsArray = new CharSequence[items.size()];
+            for (int i = 0; i < items.size(); i++) {
+                itemsArray[i] = items.getString(i);
+            }
+            args.putCharSequenceArray(RNPromptFragment.ARG_ITEMS, itemsArray);
+        }
+        if (options.hasKey(KEY_CANCELABLE)) {
+            args.putBoolean(KEY_CANCELABLE, options.getBoolean(KEY_CANCELABLE));
+        }
+        fragmentManagerHelper.showNewAlert(mIsInForeground, args, callback);
     }
 
 
@@ -139,6 +187,7 @@ public class RNPromptModule extends ReactContextBaseJavaModule implements Lifecy
         if (options.hasKey(KEY_PLACEHOLDER)) {
             args.putString(KEY_PLACEHOLDER, options.getString(KEY_PLACEHOLDER));
         }
+        args.putBoolean(KEY_SHOW_INPUT, true);
         fragmentManagerHelper.showNewAlert(mIsInForeground, args, callback);
     }
 
@@ -209,7 +258,12 @@ public class RNPromptModule extends ReactContextBaseJavaModule implements Lifecy
 
         @Override
         public void onClick(DialogInterface dialog, int which) {
-            onConfirm(which, "");
+            if (!mCallbackConsumed) {
+                if (getReactApplicationContext().hasActiveCatalystInstance()) {
+                    mCallback.invoke(ACTION_BUTTON_CLICKED, which);
+                    mCallbackConsumed = true;
+                }
+            }
         }
 
         public void onConfirm(int which, String input) {

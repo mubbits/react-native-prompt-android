@@ -25,6 +25,7 @@ public class RNPromptFragment extends DialogFragment implements DialogInterface.
     /* package */ static final String ARG_STYLE = "style";
     /* package */ static final String ARG_DEFAULT_VALUE = "defaultValue";
     /* package */ static final String ARG_PLACEHOLDER = "placeholder";
+    /* package */ static final String ARG_SHOW_INPUT = "showInput";
 
     private EditText mInputText;
 
@@ -97,6 +98,11 @@ public class RNPromptFragment extends DialogFragment implements DialogInterface.
 
         AlertDialog alertDialog = builder.create();
 
+        Boolean isShowInput = arguments.getBoolean(ARG_SHOW_INPUT, false);
+        if (!isShowInput) {
+            return alertDialog;
+        }
+        
         // input style
         LayoutInflater inflater = LayoutInflater.from(activityContext);
         final EditText input;
@@ -149,14 +155,17 @@ public class RNPromptFragment extends DialogFragment implements DialogInterface.
         alertDialog.setView(input, 50, 15, 50, 0);
 
         mInputText = input;
+        
         return alertDialog;
     }
 
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         Dialog dialog = this.createDialog(getActivity(), getArguments());
-        if (mInputText.requestFocus()) {
-            dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
+        if (mInputText != null) {
+            if (mInputText.requestFocus()) {
+                dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
+            }
         }
         return dialog;
     }
@@ -164,7 +173,11 @@ public class RNPromptFragment extends DialogFragment implements DialogInterface.
     @Override
     public void onClick(DialogInterface dialog, int which) {
         if (mListener != null) {
-            mListener.onConfirm(which, mInputText.getText().toString());
+            if (mInputText != null) {
+                mListener.onConfirm(which, mInputText.getText().toString());    
+            } else {
+                mListener.onClick(dialog, which);
+            }
         }
     }
 
